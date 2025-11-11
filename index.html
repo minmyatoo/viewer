@@ -86,6 +86,19 @@
             text-transform: uppercase;
         }
 
+        .mdc-button--outlined {
+            border: 1px solid rgba(0, 0, 0, 0.12);
+        }
+
+        body.dark-mode .mdc-button--outlined {
+            border-color: rgba(255, 255, 255, 0.12);
+            color: rgba(255, 255, 255, 0.87);
+        }
+
+        body.dark-mode .controls-container > div[style*="border-left"] {
+            border-color: rgba(255, 255, 255, 0.12) !important;
+        }
+
         .btn-validate {
             --mdc-theme-primary: #4caf50;
             --mdc-theme-on-primary: white;
@@ -126,6 +139,26 @@
             flex-direction: column;
             margin: 16px;
             overflow: hidden;
+            transition: flex 0.3s ease;
+        }
+
+        .panel.collapsed {
+            flex: 0 0 auto;
+            min-width: 60px;
+        }
+
+        .panel.collapsed .card-content {
+            display: none;
+        }
+
+        .panel.collapsed .card-header {
+            writing-mode: vertical-rl;
+            text-orientation: mixed;
+            padding: 20px 16px;
+        }
+
+        .panel.collapsed .collapse-btn {
+            transform: rotate(180deg);
         }
 
         .mdc-card {
@@ -146,6 +179,41 @@
             display: flex;
             align-items: center;
             gap: 8px;
+            transition: all 0.3s ease;
+        }
+
+        .card-header-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .collapse-btn {
+            background: transparent;
+            border: none;
+            color: rgba(0, 0, 0, 0.54);
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            width: 32px;
+            height: 32px;
+        }
+
+        .collapse-btn:hover {
+            background-color: rgba(0, 0, 0, 0.04);
+        }
+
+        body.dark-mode .collapse-btn {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        body.dark-mode .collapse-btn:hover {
+            background-color: rgba(255, 255, 255, 0.08);
         }
 
         .card-content {
@@ -599,6 +667,26 @@
                 <span class="mdc-button__label">Clear</span>
             </button>
 
+            <div style="border-left: 1px solid rgba(0, 0, 0, 0.12); height: 40px; margin: 0 4px;"></div>
+
+            <button class="mdc-button mdc-button--outlined" onclick="toggleLineNumbers()" id="lineNumberBtn">
+                <span class="mdc-button__ripple"></span>
+                <i class="material-icons mdc-button__icon">format_list_numbered</i>
+                <span class="mdc-button__label">Line Numbers</span>
+            </button>
+
+            <button class="mdc-button mdc-button--outlined" onclick="toggleWordWrap()" id="wordWrapBtn">
+                <span class="mdc-button__ripple"></span>
+                <i class="material-icons mdc-button__icon">wrap_text</i>
+                <span class="mdc-button__label">Word Wrap</span>
+            </button>
+
+            <button class="mdc-button mdc-button--outlined" onclick="downloadOutput()" title="Download output as file">
+                <span class="mdc-button__ripple"></span>
+                <i class="material-icons mdc-button__icon">download</i>
+                <span class="mdc-button__label">Download</span>
+            </button>
+
             <div class="theme-toggle">
                 <span class="theme-toggle-label">
                     <i class="material-icons" id="themeIcon">light_mode</i>
@@ -613,11 +701,16 @@
         <!-- Main Content -->
         <div class="main-content">
             <!-- Input Panel -->
-            <div class="panel">
+            <div class="panel" id="inputPanel">
                 <div class="mdc-card">
                     <div class="card-header">
-                        <i class="material-icons">input</i>
-                        Input
+                        <div class="card-header-title">
+                            <i class="material-icons">input</i>
+                            <span>Input</span>
+                        </div>
+                        <button class="collapse-btn" onclick="togglePanel('inputPanel')" aria-label="Collapse input panel">
+                            <i class="material-icons">chevron_left</i>
+                        </button>
                     </div>
                     <div class="card-content">
                         <textarea id="input" placeholder="Paste your JSON or XML here..." aria-label="Input text area"></textarea>
@@ -626,11 +719,16 @@
             </div>
 
             <!-- Output Panel -->
-            <div class="panel">
+            <div class="panel" id="outputPanel">
                 <div class="mdc-card">
                     <div class="card-header">
-                        <i class="material-icons">output</i>
-                        Output
+                        <div class="card-header-title">
+                            <i class="material-icons">output</i>
+                            <span>Output</span>
+                        </div>
+                        <button class="collapse-btn" onclick="togglePanel('outputPanel')" aria-label="Collapse output panel">
+                            <i class="material-icons">chevron_right</i>
+                        </button>
                     </div>
                     <div class="card-content">
                         <div class="status-chip status-neutral" role="status" aria-live="polite">
@@ -669,17 +767,12 @@
             setPlaceholder();
             setupKeyboardShortcuts();
             loadThemePreference();
+            loadPanelStates();
             
-            // Initialize Material ripples
-            document.querySelectorAll('.mdc-button').forEach(button => {
+            // Initialize Material ripples for all buttons
+            document.querySelectorAll('.mdc-button, .mdc-icon-button, .collapse-btn').forEach(button => {
                 mdc.ripple.MDCRipple.attachTo(button);
             });
-
-            // Initialize icon button ripple
-            const iconButton = document.querySelector('.mdc-icon-button');
-            if (iconButton) {
-                mdc.ripple.MDCRipple.attachTo(iconButton);
-            }
         });
 
         // Theme Toggle Functions
@@ -722,6 +815,112 @@
             clearAll();
             setPlaceholder();
         });
+
+        // Panel Collapse/Expand
+        function togglePanel(panelId) {
+            const panel = document.getElementById(panelId);
+            panel.classList.toggle('collapsed');
+            
+            // Save collapse state
+            const isCollapsed = panel.classList.contains('collapsed');
+            localStorage.setItem(panelId + 'Collapsed', isCollapsed);
+        }
+
+        // Load panel collapse states
+        function loadPanelStates() {
+            ['inputPanel', 'outputPanel'].forEach(panelId => {
+                const isCollapsed = localStorage.getItem(panelId + 'Collapsed') === 'true';
+                if (isCollapsed) {
+                    document.getElementById(panelId).classList.add('collapsed');
+                }
+            });
+        }
+
+        // Line Numbers Toggle
+        let lineNumbersEnabled = false;
+        function toggleLineNumbers() {
+            lineNumbersEnabled = !lineNumbersEnabled;
+            const btn = document.getElementById('lineNumberBtn');
+            
+            if (lineNumbersEnabled) {
+                btn.classList.add('mdc-button--raised');
+                btn.classList.remove('mdc-button--outlined');
+            } else {
+                btn.classList.add('mdc-button--outlined');
+                btn.classList.remove('mdc-button--raised');
+            }
+            
+            // Re-render output with or without line numbers
+            const output = document.getElementById('output');
+            if (output.innerHTML) {
+                if (currentMode === 'json') {
+                    const text = output.textContent;
+                    if (text && text.trim()) {
+                        output.innerHTML = addLineNumbers(output.innerHTML);
+                    }
+                } else {
+                    const text = output.textContent;
+                    if (text && text.trim()) {
+                        output.innerHTML = addLineNumbers(output.innerHTML);
+                    }
+                }
+            }
+        }
+
+        function addLineNumbers(html) {
+            if (!lineNumbersEnabled) return html;
+            
+            const lines = html.split('\n');
+            return lines.map((line, index) => {
+                return `<span style="color: #999; user-select: none; margin-right: 16px; display: inline-block; width: 30px; text-align: right;">${index + 1}</span>${line}`;
+            }).join('\n');
+        }
+
+        // Word Wrap Toggle
+        let wordWrapEnabled = true;
+        function toggleWordWrap() {
+            wordWrapEnabled = !wordWrapEnabled;
+            const output = document.getElementById('output');
+            const input = document.getElementById('input');
+            const btn = document.getElementById('wordWrapBtn');
+            
+            if (wordWrapEnabled) {
+                output.style.whiteSpace = 'pre-wrap';
+                input.style.whiteSpace = 'pre-wrap';
+                btn.classList.add('mdc-button--raised');
+                btn.classList.remove('mdc-button--outlined');
+            } else {
+                output.style.whiteSpace = 'pre';
+                input.style.whiteSpace = 'pre';
+                btn.classList.add('mdc-button--outlined');
+                btn.classList.remove('mdc-button--raised');
+            }
+        }
+
+        // Download Output
+        function downloadOutput() {
+            const output = document.getElementById('output');
+            const text = output.textContent;
+            
+            if (!text) {
+                updateStatus('neutral', 'Nothing to download');
+                return;
+            }
+
+            const extension = currentMode === 'json' ? '.json' : '.xml';
+            const filename = 'output' + extension;
+            const blob = new Blob([text], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            
+            updateStatus('valid', `Downloaded as ${filename}`);
+        }
 
         // Set placeholder examples
         function setPlaceholder() {
@@ -1065,6 +1264,24 @@
                 if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'K') {
                     e.preventDefault();
                     clearAll();
+                }
+
+                // Ctrl/Cmd + Shift + D: Download
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'D') {
+                    e.preventDefault();
+                    downloadOutput();
+                }
+
+                // Ctrl/Cmd + Shift + L: Toggle Line Numbers
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'L') {
+                    e.preventDefault();
+                    toggleLineNumbers();
+                }
+
+                // Ctrl/Cmd + Shift + W: Toggle Word Wrap
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'W') {
+                    e.preventDefault();
+                    toggleWordWrap();
                 }
             });
         }
