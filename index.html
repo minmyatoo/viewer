@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JSON/XML Viewer & Validator</title>
+    
+    <!-- Material Design CSS -->
+    <link href="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.css" rel="stylesheet">
+    <!-- Material Icons -->
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <!-- Roboto Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: #fafafa;
+            color: rgba(0, 0, 0, 0.87);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        /* App Bar */
+        .mdc-top-app-bar {
+            background: #1976d2;
+            box-shadow: 0 2px 4px -1px rgba(0,0,0,.2), 0 4px 5px 0 rgba(0,0,0,.14), 0 1px 10px 0 rgba(0,0,0,.12);
+        }
+
+        .mdc-top-app-bar__title {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        /* Tabs */
+        .mdc-tab-bar {
+            background: white;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+        }
+
+        .mdc-tab {
+            font-family: 'Roboto', sans-serif;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+        }
+
+        .mdc-tab--active {
+            color: #1976d2;
+        }
+
+        .mdc-tab-indicator .mdc-tab-indicator__content--underline {
+            background-color: #1976d2;
+            height: 3px;
+        }
+
+        /* Controls Section */
+        .controls-container {
+            background: white;
+            padding: 16px 24px;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        /* Material Buttons */
+        .mdc-button {
+            font-family: 'Roboto', sans-serif;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .btn-validate {
+            --mdc-theme-primary: #4caf50;
+            --mdc-theme-on-primary: white;
+        }
+
+        .btn-format {
+            --mdc-theme-primary: #ff9800;
+            --mdc-theme-on-primary: white;
+        }
+
+        .btn-minify {
+            --mdc-theme-primary: #9c27b0;
+            --mdc-theme-on-primary: white;
+        }
+
+        .btn-copy {
+            --mdc-theme-primary: #2196f3;
+            --mdc-theme-on-primary: white;
+        }
+
+        .btn-clear {
+            --mdc-theme-primary: #f44336;
+            --mdc-theme-on-primary: white;
+        }
+
+        /* Main Content */
+        .main-content {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+            background: #fafafa;
+        }
+
+        /* Material Cards for Panels */
+        .panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            margin: 16px;
+            overflow: hidden;
+        }
+
+        .mdc-card {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            padding: 16px 20px;
+            background: #f5f5f5;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.12);
+            font-weight: 500;
+            font-size: 16px;
+            color: rgba(0, 0, 0, 0.87);
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-content {
+            flex: 1;
+            padding: 20px;
+            overflow: auto;
+            background: white;
+        }
+
+        /* Textarea */
+        textarea {
+            width: 100%;
+            height: 100%;
+            background: #fafafa;
+            color: rgba(0, 0, 0, 0.87);
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            border-radius: 4px;
+            padding: 16px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            resize: none;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        textarea:focus {
+            border-color: #1976d2;
+            box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+        }
+
+        /* Output */
+        .output {
+            width: 100%;
+            height: 100%;
+            background: #fafafa;
+            border: 1px solid rgba(0, 0, 0, 0.12);
+            border-radius: 4px;
+            padding: 16px;
+            font-family: 'Roboto Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        /* Status Chip */
+        .status-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .status-neutral {
+            background: #e0e0e0;
+            color: rgba(0, 0, 0, 0.87);
+        }
+
+        .status-valid {
+            background: #c8e6c9;
+            color: #2e7d32;
+        }
+
+        .status-invalid {
+            background: #ffcdd2;
+            color: #c62828;
+        }
+
+        .status-icon {
+            font-size: 20px;
+        }
+
+        /* Syntax Highlighting */
+        .json-key {
+            color: #1976d2;
+            font-weight: 500;
+        }
+
+        .json-string {
+            color: #388e3c;
+        }
+
+        .json-number {
+            color: #f57c00;
+        }
+
+        .json-boolean {
+            color: #7b1fa2;
+        }
+
+        .json-null {
+            color: #d32f2f;
+        }
+
+        .xml-tag {
+            color: #1976d2;
+            font-weight: 500;
+        }
+
+        .xml-attr-name {
+            color: #0288d1;
+        }
+
+        .xml-attr-value {
+            color: #388e3c;
+        }
+
+        .xml-text {
+            color: rgba(0, 0, 0, 0.87);
+        }
+
+        .xml-comment {
+            color: #757575;
+            font-style: italic;
+        }
+
+        /* Snackbar */
+        .mdc-snackbar {
+            z-index: 1000;
+        }
+
+        .mdc-snackbar__surface {
+            background-color: #323232;
+        }
+
+        .mdc-snackbar__label {
+            color: white;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 12px;
+            height: 12px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f5f5f5;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #bdbdbd;
+            border-radius: 6px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #9e9e9e;
+        }
+
+        /* Responsive */
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .panel {
+                margin: 8px;
+                min-height: 300px;
+            }
+
+            .controls-container {
+                padding: 12px 16px;
+                gap: 8px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .mdc-top-app-bar__title {
+                font-size: 18px;
+            }
+
+            .card-content {
+                padding: 12px;
+            }
+
+            .mdc-button {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top App Bar -->
+    <header class="mdc-top-app-bar">
+        <div class="mdc-top-app-bar__row">
+            <section class="mdc-top-app-bar__section mdc-top-app-bar__section--align-start">
+                <span class="mdc-top-app-bar__title">
+                    <i class="material-icons" style="font-size: 28px;">code</i>
+                    JSON/XML Viewer & Validator
+                </span>
+            </section>
+        </div>
+    </header>
+
+    <div class="container" style="padding-top: 64px;">
+        <!-- Tabs -->
+        <div class="mdc-tab-bar" role="tablist">
+            <div class="mdc-tab-scroller">
+                <div class="mdc-tab-scroller__scroll-area">
+                    <div class="mdc-tab-scroller__scroll-content">
+                        <button class="mdc-tab mdc-tab--active" role="tab" aria-selected="true" tabindex="0" data-mode="json">
+                            <span class="mdc-tab__content">
+                                <span class="mdc-tab__icon material-icons">data_object</span>
+                                <span class="mdc-tab__text-label">JSON Mode</span>
+                            </span>
+                            <span class="mdc-tab-indicator mdc-tab-indicator--active">
+                                <span class="mdc-tab-indicator__content mdc-tab-indicator__content--underline"></span>
+                            </span>
+                            <span class="mdc-tab__ripple"></span>
+                        </button>
+                        <button class="mdc-tab" role="tab" aria-selected="false" tabindex="-1" data-mode="xml">
+                            <span class="mdc-tab__content">
+                                <span class="mdc-tab__icon material-icons">description</span>
+                                <span class="mdc-tab__text-label">XML Mode</span>
+                            </span>
+                            <span class="mdc-tab-indicator">
+                                <span class="mdc-tab-indicator__content mdc-tab-indicator__content--underline"></span>
+                            </span>
+                            <span class="mdc-tab__ripple"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls-container">
+            <button class="mdc-button mdc-button--raised btn-validate" onclick="validate()">
+                <span class="mdc-button__ripple"></span>
+                <i class="material-icons mdc-button__icon">check_circle</i>
+                <span class="mdc-button__label">Validate</span>
+            </button>
+
+            <button class="mdc-button mdc-button--raised btn-format" onclick="format()">
+                <span class="mdc-button__ripple"></span>
+                <i class="material-icons mdc-button__icon">format_align_left</i>
+                <span class="mdc-button__label">Format</span>
+            </button>
+
+            <button class="mdc-button mdc-button--raised btn-minify" onclick="minify()">
+                <span class="mdc-button__ripple"></span>
+                <i class="material-icons mdc-button__icon">compress</i>
+                <span class="mdc-button__label">Minify</span>
+            </button>
+
+            <button class="mdc-button mdc-button--raised btn-copy" onclick="copyOutput()">
+                <span class="mdc-button__ripple"></span>
+                <i class="material-icons mdc-button__icon">content_copy</i>
+                <span class="mdc-button__label">Copy</span>
+            </button>
+
+            <button class="mdc-button mdc-button--raised btn-clear" onclick="clearAll()">
+                <span class="mdc-button__ripple"></span>
+                <i class="material-icons mdc-button__icon">delete</i>
+                <span class="mdc-button__label">Clear</span>
+            </button>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Input Panel -->
+            <div class="panel">
+                <div class="mdc-card">
+                    <div class="card-header">
+                        <i class="material-icons">input</i>
+                        Input
+                    </div>
+                    <div class="card-content">
+                        <textarea id="input" placeholder="Paste your JSON or XML here..." aria-label="Input text area"></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Output Panel -->
+            <div class="panel">
+                <div class="mdc-card">
+                    <div class="card-header">
+                        <i class="material-icons">output</i>
+                        Output
+                    </div>
+                    <div class="card-content">
+                        <div class="status-chip status-neutral" role="status" aria-live="polite">
+                            <i class="material-icons status-icon">info</i>
+                            <span id="statusMessage">Ready - Paste your data and click Validate</span>
+                        </div>
+                        <div class="output" id="output" aria-label="Output display area"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Snackbar for notifications -->
+    <aside class="mdc-snackbar" id="snackbar">
+        <div class="mdc-snackbar__surface" role="status" aria-relevant="additions">
+            <div class="mdc-snackbar__label" aria-atomic="false">
+                Copied to clipboard!
+            </div>
+        </div>
+    </aside>
+
+    <!-- Material Components Web JS -->
+    <script src="https://unpkg.com/material-components-web@latest/dist/material-components-web.min.js"></script>
+
+    <script>
+        // Global state
+        let currentMode = 'json';
+
+        // Initialize Material Components
+        const tabBar = new mdc.tabBar.MDCTabBar(document.querySelector('.mdc-tab-bar'));
+        const snackbar = new mdc.snackbar.MDCSnackbar(document.querySelector('.mdc-snackbar'));
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            setPlaceholder();
+            setupKeyboardShortcuts();
+            
+            // Initialize Material ripples
+            document.querySelectorAll('.mdc-button').forEach(button => {
+                mdc.ripple.MDCRipple.attachTo(button);
+            });
+        });
+
+        // Tab switching
+        tabBar.listen('MDCTabBar:activated', (event) => {
+            const tabs = document.querySelectorAll('.mdc-tab');
+            currentMode = tabs[event.detail.index].dataset.mode;
+            clearAll();
+            setPlaceholder();
+        });
+
+        // Set placeholder examples
+        function setPlaceholder() {
+            const input = document.getElementById('input');
+            if (currentMode === 'json') {
+                input.placeholder = `Paste your JSON here... Example:
+
+{
+  "name": "John Doe",
+  "age": 30,
+  "email": "john@example.com",
+  "active": true,
+  "hobbies": ["reading", "coding", "gaming"],
+  "address": {
+    "street": "123 Main St",
+    "city": "New York",
+    "country": "USA"
+  }
+}`;
+            } else {
+                input.placeholder = `Paste your XML here... Example:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<person>
+  <name>John Doe</name>
+  <age>30</age>
+  <email>john@example.com</email>
+  <active>true</active>
+  <hobbies>
+    <hobby>reading</hobby>
+    <hobby>coding</hobby>
+    <hobby>gaming</hobby>
+  </hobbies>
+  <address>
+    <street>123 Main St</street>
+    <city>New York</city>
+    <country>USA</country>
+  </address>
+</person>`;
+            }
+        }
+
+        // Validation function
+        function validate() {
+            const input = document.getElementById('input').value.trim();
+            const output = document.getElementById('output');
+            
+            if (!input) {
+                updateStatus('neutral', 'Please enter some data to validate');
+                output.textContent = '';
+                return;
+            }
+
+            if (currentMode === 'json') {
+                validateJSON(input);
+            } else {
+                validateXML(input);
+            }
+        }
+
+        // JSON validation
+        function validateJSON(input) {
+            const output = document.getElementById('output');
+            
+            try {
+                const parsed = JSON.parse(input);
+                const formatted = JSON.stringify(parsed, null, 2);
+                output.innerHTML = syntaxHighlightJSON(formatted);
+                updateStatus('valid', 'Valid JSON ✓');
+            } catch (error) {
+                output.innerHTML = `<span style="color: #c62828;">Error: ${escapeHtml(error.message)}</span>`;
+                updateStatus('invalid', `Invalid JSON: ${error.message}`);
+            }
+        }
+
+        // XML validation
+        function validateXML(input) {
+            const output = document.getElementById('output');
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(input, 'text/xml');
+            
+            const parseError = xmlDoc.getElementsByTagName('parsererror');
+            
+            if (parseError.length > 0) {
+                const errorText = parseError[0].textContent;
+                output.innerHTML = `<span style="color: #c62828;">Error: ${escapeHtml(errorText)}</span>`;
+                updateStatus('invalid', `Invalid XML: ${errorText}`);
+            } else {
+                const formatted = formatXML(input);
+                output.innerHTML = syntaxHighlightXML(formatted);
+                updateStatus('valid', 'Valid XML ✓');
+            }
+        }
+
+        // Format/Beautify function
+        function format() {
+            const input = document.getElementById('input').value.trim();
+            const output = document.getElementById('output');
+            
+            if (!input) {
+                updateStatus('neutral', 'Please enter some data to format');
+                output.textContent = '';
+                return;
+            }
+
+            if (currentMode === 'json') {
+                try {
+                    const parsed = JSON.parse(input);
+                    const formatted = JSON.stringify(parsed, null, 2);
+                    document.getElementById('input').value = formatted;
+                    output.innerHTML = syntaxHighlightJSON(formatted);
+                    updateStatus('valid', 'JSON formatted successfully ✓');
+                } catch (error) {
+                    output.innerHTML = `<span style="color: #c62828;">Error: ${escapeHtml(error.message)}</span>`;
+                    updateStatus('invalid', `Cannot format - Invalid JSON: ${error.message}`);
+                }
+            } else {
+                try {
+                    const formatted = formatXML(input);
+                    document.getElementById('input').value = formatted;
+                    output.innerHTML = syntaxHighlightXML(formatted);
+                    updateStatus('valid', 'XML formatted successfully ✓');
+                } catch (error) {
+                    output.innerHTML = `<span style="color: #c62828;">Error: ${escapeHtml(error.message)}</span>`;
+                    updateStatus('invalid', `Cannot format - Invalid XML: ${error.message}`);
+                }
+            }
+        }
+
+        // Minify function
+        function minify() {
+            const input = document.getElementById('input').value.trim();
+            const output = document.getElementById('output');
+            
+            if (!input) {
+                updateStatus('neutral', 'Please enter some data to minify');
+                output.textContent = '';
+                return;
+            }
+
+            if (currentMode === 'json') {
+                try {
+                    const parsed = JSON.parse(input);
+                    const minified = JSON.stringify(parsed);
+                    document.getElementById('input').value = minified;
+                    output.innerHTML = syntaxHighlightJSON(minified);
+                    updateStatus('valid', 'JSON minified successfully ✓');
+                } catch (error) {
+                    output.innerHTML = `<span style="color: #c62828;">Error: ${escapeHtml(error.message)}</span>`;
+                    updateStatus('invalid', `Cannot minify - Invalid JSON: ${error.message}`);
+                }
+            } else {
+                try {
+                    const parser = new DOMParser();
+                    const xmlDoc = parser.parseFromString(input, 'text/xml');
+                    const parseError = xmlDoc.getElementsByTagName('parsererror');
+                    
+                    if (parseError.length > 0) {
+                        throw new Error(parseError[0].textContent);
+                    }
+                    
+                    const minified = input.replace(/>\s+</g, '><').replace(/\n/g, '').trim();
+                    document.getElementById('input').value = minified;
+                    output.innerHTML = syntaxHighlightXML(minified);
+                    updateStatus('valid', 'XML minified successfully ✓');
+                } catch (error) {
+                    output.innerHTML = `<span style="color: #c62828;">Error: ${escapeHtml(error.message)}</span>`;
+                    updateStatus('invalid', `Cannot minify - Invalid XML: ${error.message}`);
+                }
+            }
+        }
+
+        // Format XML helper
+        function formatXML(xml) {
+            const PADDING = '  ';
+            const reg = /(>)(<)(\/*)/g;
+            let formatted = '';
+            let pad = 0;
+
+            xml = xml.replace(reg, '$1\n$2$3');
+            
+            xml.split('\n').forEach(node => {
+                let indent = 0;
+                if (node.match(/.+<\/\w[^>]*>$/)) {
+                    indent = 0;
+                } else if (node.match(/^<\/\w/)) {
+                    if (pad !== 0) {
+                        pad -= 1;
+                    }
+                } else if (node.match(/^<\w([^>]*[^\/])?>.*$/)) {
+                    indent = 1;
+                } else {
+                    indent = 0;
+                }
+
+                formatted += PADDING.repeat(pad) + node + '\n';
+                pad += indent;
+            });
+
+            return formatted.trim();
+        }
+
+        // Syntax highlighting for JSON
+        function syntaxHighlightJSON(json) {
+            json = escapeHtml(json);
+            
+            json = json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, function (match) {
+                let cls = 'json-number';
+                if (/^"/.test(match)) {
+                    if (/:$/.test(match)) {
+                        cls = 'json-key';
+                    } else {
+                        cls = 'json-string';
+                    }
+                } else if (/true|false/.test(match)) {
+                    cls = 'json-boolean';
+                } else if (/null/.test(match)) {
+                    cls = 'json-null';
+                }
+                return '<span class="' + cls + '">' + match + '</span>';
+            });
+            
+            return json;
+        }
+
+        // Syntax highlighting for XML
+        function syntaxHighlightXML(xml) {
+            xml = escapeHtml(xml);
+            
+            // Highlight XML comments
+            xml = xml.replace(/(&lt;!--[\s\S]*?--&gt;)/g, '<span class="xml-comment">$1</span>');
+            
+            // Highlight XML tags with attributes
+            xml = xml.replace(/(&lt;\/?)([\w:-]+)((?:\s+[\w:-]+(?:=(?:"[^"]*"|'[^']*'))?)*\s*)(\/?&gt;)/g, function(match, p1, p2, p3, p4) {
+                let result = '<span class="xml-tag">' + p1 + p2 + '</span>';
+                
+                // Highlight attributes
+                if (p3) {
+                    result += p3.replace(/([\w:-]+)(=)("([^"]*)"|'([^']*)')?/g, function(m, attrName, eq, attrValue) {
+                        return '<span class="xml-attr-name">' + attrName + '</span>' + 
+                               eq + 
+                               '<span class="xml-attr-value">' + (attrValue || '') + '</span>';
+                    });
+                }
+                
+                result += '<span class="xml-tag">' + p4 + '</span>';
+                return result;
+            });
+            
+            return xml;
+        }
+
+        // Copy to clipboard
+        function copyOutput() {
+            const output = document.getElementById('output');
+            const text = output.textContent;
+            
+            if (!text) {
+                updateStatus('neutral', 'Nothing to copy');
+                return;
+            }
+
+            navigator.clipboard.writeText(text).then(() => {
+                snackbar.open();
+                updateStatus('valid', 'Copied to clipboard ✓');
+            }).catch(err => {
+                updateStatus('invalid', 'Failed to copy to clipboard');
+                console.error('Copy failed:', err);
+            });
+        }
+
+        // Clear all
+        function clearAll() {
+            document.getElementById('input').value = '';
+            document.getElementById('output').textContent = '';
+            updateStatus('neutral', 'Ready - Paste your data and click Validate');
+        }
+
+        // Update status indicator
+        function updateStatus(status, message) {
+            const statusChip = document.querySelector('.status-chip');
+            const statusIcon = document.querySelector('.status-icon');
+            const statusMessage = document.getElementById('statusMessage');
+            
+            statusChip.className = 'status-chip';
+            
+            if (status === 'valid') {
+                statusChip.classList.add('status-valid');
+                statusIcon.textContent = 'check_circle';
+            } else if (status === 'invalid') {
+                statusChip.classList.add('status-invalid');
+                statusIcon.textContent = 'error';
+            } else {
+                statusChip.classList.add('status-neutral');
+                statusIcon.textContent = 'info';
+            }
+            
+            statusMessage.textContent = message;
+        }
+
+        // Escape HTML
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Keyboard shortcuts
+        function setupKeyboardShortcuts() {
+            document.addEventListener('keydown', function(e) {
+                // Ctrl/Cmd + Enter: Validate
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    e.preventDefault();
+                    validate();
+                }
+                
+                // Ctrl/Cmd + Shift + F: Format
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'F') {
+                    e.preventDefault();
+                    format();
+                }
+                
+                // Ctrl/Cmd + Shift + M: Minify
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'M') {
+                    e.preventDefault();
+                    minify();
+                }
+                
+                // Ctrl/Cmd + Shift + C: Copy
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'C') {
+                    e.preventDefault();
+                    copyOutput();
+                }
+                
+                // Ctrl/Cmd + Shift + K: Clear
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === 'K') {
+                    e.preventDefault();
+                    clearAll();
+                }
+            });
+        }
+    </script>
+</body>
+</html>
